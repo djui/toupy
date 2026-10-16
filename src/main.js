@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
-import { GROUPS, DEFAULTS, load, save, toHash } from './params.js';
+import { GROUPS, ALL, DEFAULTS, load, save, toHash, BUILT_IN, loadPresets, savePreset, deletePreset, presetParams } from './params.js';
 import { layout, warnings, trayGeometry, hubGeometry, nubGeometry } from './model.js';
 import { routerPlan } from './router.js';
 import { Viewer } from './scene.js';
@@ -16,21 +16,35 @@ let P = load();
 let state = {};
 
 // ---------------------------------------------------------------- controls
+const BY_KEY = Object.fromEntries(ALL.map(p => [p.key, p]));
+const FIXED_NOTE = {
+  bought: 'Set by what you bought',
+  measured: 'Measured on site',
+  'your tool': 'Set by your tools',
+};
+const unlocked = new Set();
+const isChanged = k => String(P[k]) !== String(DEFAULTS[k]);
+const fmtDefault = p => p.options ? p.options.find(o => o[0] === String(p.def))[1].split(' ')[0] : `${p.def}${p.unit === '' ? '' : ' mm'}`;
+
 function buildControls() {
   const host = $('#params');
   host.innerHTML = '';
   for (const g of GROUPS) {
     const det = document.createElement('details');
     det.open = matchMedia('(min-width: 821px)').matches && (g.id === 'tray' || g.id === 'hang');
-    det.innerHTML = `<summary>${g.label}</summary>`;
+    det.innerHTML = `<summary>${g.label}<span class="count" data-count="${g.id}"></span></summary>`;
     for (const p of g.params) {
-      const row = document.createElement('label');
-      row.className = 'param';
+      const row = document.createElement('div');
+      row.className = 'param' + (p.fixed ? ' fixed' : '');
+      row.dataset.row = p.key;
+      const head = `<div class="lbl"><span>${p.label}</span>${
+        p.fixed ? `<button class="lock" data-lock="${p.key}" title="${FIXED_NOTE[p.fixed]}. Locked so it isn't changed by accident; click to unlock."><svg viewBox="0 0 16 16" aria-hidden="true"><path class="shackle" d="M5 7V5a3 3 0 0 1 6 0v2"/><rect x="3.5" y="7" width="9" height="7" rx="1.5"/></svg>${p.fixed}</button>` : ''
+      }<button class="reset" data-reset="${p.key}" title="Back to the default">↺ ${fmtDefault(p)}</button></div>`;
       if (p.options) {
-        row.innerHTML = `<span>${p.label}</span><select data-key="${p.key}">${p.options.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>`;
+        row.innerHTML = `${head}<select data-key="${p.key}" aria-label="${p.label}">${p.options.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>`;
       } else {
         const unit = p.unit ?? 'mm';
-        row.innerHTML = `<span>${p.label}</span><div class="inputs"><input type="range" min="${p.min}" max="${p.max}" step="${p.step}" data-key="${p.key}"><input type="number" min="${p.min}" max="${p.max}" step="${p.step}" data-key="${p.key}"><i>${unit}</i></div>`;
+        row.innerHTML = `${head}<div class="inputs"><input type="range" min="${p.min}" max="${p.max}" step="${p.step}" data-key="${p.key}" aria-label="${p.label}"><input type="number" min="${p.min}" max="${p.max}" step="${p.step}" data-key="${p.key}" aria-label="${p.label}"><i>${unit}</i></div>`;
       }
       det.appendChild(row);
     }
@@ -45,15 +59,61 @@ function buildControls() {
     syncInputs(e.target);
     schedule();
   });
+  host.addEventListener('click', e => {
+    const r = e.target.closest('[data-reset]'), l = e.target.closest('[data-lock]');
+    if (r) { P = { ...P, [r.dataset.reset]: DEFAULTS[r.dataset.reset] }; syncInputs(); schedule(); }
+    if (l) { const k = l.dataset.lock; unlocked.has(k) ? unlocked.delete(k) : unlocked.add(k); syncInputs(); }
+  });
 }
 
 function syncInputs(except) {
   for (const el of document.querySelectorAll('#params [data-key]')) {
-    if (el === except) continue;
-    el.value = P[el.dataset.key];
-    el.closest('.param').classList.toggle('changed', String(P[el.dataset.key]) !== String(DEFAULTS[el.dataset.key]));
+    if (el !== except) el.value = P[el.dataset.key];
+    el.disabled = !!BY_KEY[el.dataset.key].fixed && !unlocked.has(el.dataset.key);
   }
-  if (except) except.closest('.param').classList.toggle('changed', String(P[except.dataset.key]) !== String(DEFAULTS[except.dataset.key]));
+  for (const row of document.querySelectorAll('#params [data-row]')) {
+    const k = row.dataset.row;
+    row.classList.toggle('changed', isChanged(k));
+    row.classList.toggle('unlocked', unlocked.has(k));
+  }
+  for (const g of GROUPS) {
+    const n = g.params.filter(p => isChanged(p.key)).length;
+    $(`[data-count="${g.id}"]`).textContent = n ? `${n} changed` : '';
+  }
+  const total = ALL.filter(p => isChanged(p.key)).length;
+  $('#changedAll').textContent = total ? `${total} value${total > 1 ? 's' : ''} changed from the defaults` : 'All values are the defaults';
+}
+
+// ---------------------------------------------------------------- presets
+function renderPresets(selected = '') {
+  const mine = Object.keys(loadPresets()).sort();
+  $('#preset').innerHTML = `<option value="">Load a preset…</option>
+    <optgroup label="Built in">${Object.keys(BUILT_IN).map(n => `<option>${n}</option>`).join('')}</optgroup>
+    ${mine.length ? `<optgroup label="Yours">${mine.map(n => `<option>${n.replace(/</g, '&lt;')}</option>`).join('')}</optgroup>` : ''}`;
+  $('#preset').value = selected;
+  $('#presetDelete').disabled = !mine.includes(selected);
+}
+
+function wirePresets() {
+  renderPresets();
+  $('#preset').addEventListener('change', e => {
+    const params = presetParams(e.target.value);
+    $('#presetDelete').disabled = !(e.target.value in loadPresets());
+    if (!params) return;
+    P = params; syncInputs(); update();
+  });
+  $('#presetSave').addEventListener('click', () => {
+    const name = prompt('Save the current values as a preset named:', $('#preset').value && !($('#preset').value in BUILT_IN) ? $('#preset').value : '')?.trim();
+    if (!name || name in BUILT_IN) return;
+    savePreset(name, P);
+    renderPresets(name);
+  });
+  $('#presetDelete').addEventListener('click', () => {
+    const name = $('#preset').value;
+    if (!name || !confirm(`Delete the preset "${name}"?`)) return;
+    deletePreset(name);
+    renderPresets();
+  });
 }
 
 let timer;
@@ -213,7 +273,7 @@ document.addEventListener('click', e => {
   if (b.dataset.view) viewer.frame(b.dataset.view);
   if (b.dataset.stl) exportSTL(b.dataset.stl);
   if (b.dataset.print) printMode(b.dataset.print);
-  if (b.id === 'reset') { P = { ...DEFAULTS }; syncInputs(); update(); }
+  if (b.id === 'reset') { P = { ...DEFAULTS }; syncInputs(); update(); renderPresets(); }
   if (b.id === 'copy') {
     const url = location.href.split('#')[0] + toHash(P);
     navigator.clipboard?.writeText(url).then(() => { b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy link'), 1500); },
@@ -226,6 +286,7 @@ window.addEventListener('hashchange', () => { P = load(); syncInputs(); update()
 
 document.body.insertAdjacentHTML('afterbegin', `<svg class="defs" aria-hidden="true">${DEFS}</svg>`);
 buildControls();
+wirePresets();
 syncInputs();
 update();
 let startTab = '3d';

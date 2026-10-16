@@ -12,6 +12,9 @@ An interactive 3D blueprint for building a hanging tray table, after the
 - bill of materials, cut layout on the oak sheet, router passes, lathe and hanging steps
 
 Every dimension is a setting. Changes are saved in the link (`#trayD=400…`) and in the browser.
+Changed values are marked in gold with a ↺ to put each one back; named presets are kept in
+the browser. Values set by what you bought, measured or own (board thickness, sheet size,
+tubes, bits, ceiling height) are locked until you unlock them.
 
 The defaults describe one build: a Ø440 × 20 mm oak tray, routed in stepped rings
 with a sled that pivots on the centre bore; an upper hub and lower nub turned from

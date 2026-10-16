@@ -13,7 +13,7 @@
   <h1>Toupy <span>hanging tray table — 3D blueprint</span></h1>
   <div class="actions">
     <button class="btn" id="copy">Copy link</button>
-    <button class="btn ghost" id="reset">Reset</button>
+    <button class="btn ghost" id="reset" title="Put every value back to the default">Reset all</button>
     <button class="btn ghost" data-print="docs">Print drawings &amp; plan</button>
   </div>
 </header>
@@ -21,8 +21,14 @@
   <aside class="side">
     <div id="keys" class="keys"></div>
     <ul id="warnings" class="warnings" hidden></ul>
+    <div class="presets">
+      <select id="preset" aria-label="Presets"></select>
+      <button class="btn small ghost" id="presetSave" title="Save the current values under a name, in this browser">Save…</button>
+      <button class="btn small ghost" id="presetDelete" title="Delete the selected preset" disabled>Delete</button>
+    </div>
+    <p id="changedAll" class="changedAll"></p>
     <div id="params"></div>
-    <p class="fine">Defaults are traced from photos of the 44 cm original. Every change is saved in the link and in this browser.</p>
+    <p class="fine">Defaults are traced from photos of the 44 cm original. Every change is saved in the link and in this browser. <b>Gold</b> labels differ from the default; ↺ puts one back. Values with a lock come from what you bought, measured or own; unlock them to change them.</p>
   </aside>
   <main class="main">
     <nav class="tabs" role="tablist">
