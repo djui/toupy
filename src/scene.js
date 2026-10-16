@@ -39,7 +39,7 @@ export class Viewer {
   constructor(el, { onHover } = {}) {
     this.el = el;
     this.onHover = onHover;
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, logarithmicDepthBuffer: true });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.localClippingEnabled = true;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -52,7 +52,7 @@ export class Viewer {
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
-    this.camera = new THREE.PerspectiveCamera(35, 1, 5, 20000);
+    this.camera = new THREE.PerspectiveCamera(35, 1, 20, 20000);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
 
@@ -68,10 +68,11 @@ export class Viewer {
       brass: new THREE.MeshStandardMaterial({ color: 0xe0b85a, metalness: 1, roughness: 0.18 }),
       steel: new THREE.MeshStandardMaterial({ color: 0xb8b8b8, metalness: 1, roughness: 0.35 }),
     };
+    const cap = color => new THREE.MeshBasicMaterial({ color, side: THREE.BackSide });
     this.caps = {
-      oak: new THREE.MeshBasicMaterial({ color: 0x8c5a2b, side: THREE.BackSide }),
-      brass: new THREE.MeshBasicMaterial({ color: 0x9c7a26, side: THREE.BackSide }),
-      steel: new THREE.MeshBasicMaterial({ color: 0x6f6f6f, side: THREE.BackSide }),
+      oak: cap(0x8c5a2b),
+      brass: cap(0x9c7a26),
+      steel: cap(0x6f6f6f),
     };
     this.hoverMat = new THREE.MeshStandardMaterial({ color: 0x5aa0ff, roughness: 0.5, emissive: 0x16365c });
     for (const m of [...Object.values(this.mats), ...Object.values(this.caps), this.hoverMat]) {
@@ -123,12 +124,19 @@ export class Viewer {
     this.root.clear();
     this.items = [];
     const geos = partGeometries(p, L);
+    // Parts that sit flush on the tray (hub foot on the dish floor, tenons in
+    // their recesses) share surfaces, which the GPU can't order and draws as
+    // flickering lines. In the view only, they get a hair of clearance.
+    const CLEAR = 0.3;
+    const clearance = { hub: [CLEAR, 1 - CLEAR / p.tenonD], nub: [-CLEAR, 1 - CLEAR / p.nubTenonD] };
     const add = (id, geoKey, y, explodeDir, label) => {
       const { geo, kind } = geos[geoKey];
       const mesh = new THREE.Mesh(geo, this.mats[kind]);
       const cap = new THREE.Mesh(geo, this.caps[kind]);
       const g = new THREE.Group();
       g.add(mesh, cap);
+      const c = clearance[id];
+      if (c) { mesh.position.y = cap.position.y = c[0]; mesh.scale.set(c[1], 1, c[1]); cap.scale.copy(mesh.scale); }
       mesh.userData = { id, label, kind };
       this.root.add(g);
       this.items.push({ id, group: g, mesh, y, explodeDir, kind });
