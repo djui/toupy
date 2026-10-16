@@ -7,7 +7,7 @@ export const GROUPS = [
       { key: 'trayD', label: 'Diameter', min: 300, max: 600, step: 1, def: 440 },
       { key: 'trayT', label: 'Board thickness', min: 15, max: 40, step: 0.5, def: 20 },
       { key: 'dish', label: 'Dish depth', min: 0, max: 10, step: 0.5, def: 4 },
-      { key: 'dishInset', label: 'Rim width (edge to dish wall)', min: 8, max: 40, step: 0.5, def: 15 },
+      { key: 'dishInset', label: 'Rim width (edge to dish wall)', min: 0, max: 40, step: 0.5, def: 15 },
       { key: 'edgeT', label: 'Edge thickness', min: 6, max: 40, step: 0.5, def: 12 },
       { key: 'underR', label: 'Underside curve starts at radius', min: 60, max: 280, step: 1, def: 170 },
       { key: 'underP', label: 'Underside curve shape', min: 1, max: 3, step: 0.1, def: 1.8, unit: '' },
@@ -36,7 +36,8 @@ export const GROUPS = [
   {
     id: 'joint', label: 'Joints', params: [
       { key: 'holeD', label: 'Bore through the wood', min: 10, max: 14, step: 0.5, def: 11 },
-      { key: 'tenonD', label: 'Tenon diameter', min: 16, max: 50, step: 0.5, def: 30 },
+      { key: 'tenonD', label: 'Upper tenon diameter (up to the hub foot)', min: 16, max: 180, step: 0.5, def: 30 },
+      { key: 'nubTenonD', label: 'Lower tenon diameter (up to the nub top)', min: 16, max: 80, step: 0.5, def: 30 },
       { key: 'tenonH', label: 'Tenon / recess depth', min: 1, max: 8, step: 0.5, def: 3 },
     ],
   },

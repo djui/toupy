@@ -1,6 +1,12 @@
 // Stepped-ring routing plan for the tray: a sled pivots on the centre pin and
 // rides on the untouched corners of the square blank, so every depth is
-// measured from the blank's surface.
+// measured from the blank's surface. The sled sits LIFT mm above that
+// surface (nuts on the pin at one end, a foot block at the other), so the
+// pivot nuts never touch the wood and the bit can cut right up to the bore.
+
+export const LIFT = 10;
+// Recesses up to this size are drilled with a Forstner bit; wider ones are routed.
+export const FORSTNER_MAX = 40;
 
 const r1 = x => Math.round(x * 10) / 10;
 
@@ -11,7 +17,21 @@ function passes(depth, max) {
 
 export function routerPlan(p, tray) {
   const b = p.bitD, w = Math.min(p.ringStep, b);
-  const recR = p.tenonD / 2;
+  const holeR = p.holeD / 2;
+
+  // Flat rings from the bore out to rOut, ending exactly on rOut.
+  const flatRings = (rOut, depth) => {
+    const out = [];
+    const last = rOut - b / 2;
+    if (last < holeR + b / 2 - 0.01) return out;
+    for (let c = holeR + b / 2; ; c += w) {
+      const centre = Math.min(c, last);
+      out.push({ inner: r1(centre - b / 2), centre: r1(centre), depth: r1(depth), passes: passes(depth, p.maxPass) });
+      if (centre === last) break;
+    }
+    return out;
+  };
+  const recess = (r, depth) => 2 * r <= FORSTNER_MAX ? null : flatRings(r, depth);
 
   // Underside: rings from where the curve starts out to the edge.
   // Each ring is cut to the depth at its inner edge, so the steps stay
@@ -35,13 +55,9 @@ export function routerPlan(p, tray) {
   }
 
   // Top: flat floor out to the cove centre, then the dish bit forms the wall.
-  const floor = [];
-  const floorEnd = tray.rc - b / 2;
-  for (let c = recR - 2 + b / 2; c < floorEnd + w; c += w) {
-    const centre = Math.min(c, floorEnd);
-    floor.push({ inner: r1(centre - b / 2), centre: r1(centre), depth: r1(tray.dish), passes: passes(tray.dish, p.maxPass) });
-    if (centre === floorEnd) break;
-  }
+  const floor = flatRings(tray.rc, tray.dish);
+  const topRecess = recess(tray.topRecR, tray.dish + p.tenonH);
+  const lowRecess = recess(tray.lowRecR, p.tenonH);
   const cove = { centre: r1(tray.rc), depth: r1(tray.dish), passes: passes(tray.dish, p.maxPass) };
 
   const cutCentre = r1(tray.R + b / 2);
@@ -55,10 +71,10 @@ export function routerPlan(p, tray) {
     length: footAt + 40,
     width: Math.ceil(Math.max(120, p.baseD * 0.8)),
     footAt,
-    slotFrom: Math.floor(recR - 2),
+    slotFrom: Math.floor(holeR),
     slotTo: Math.ceil(tray.R + b),
     t: p.sledT,
   };
 
-  return { under, floor, cove, cutCentre, throughFirst, sled, maxStep: r1(maxStep), ringW: w };
+  return { under, floor, cove, topRecess, lowRecess, cutCentre, throughFirst, sled, maxStep: r1(maxStep), ringW: w };
 }

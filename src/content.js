@@ -1,6 +1,7 @@
 // Bill of materials, cut layout, routing plan and assembly steps.
 import { Sheet } from './drawings.js';
-import { WASHER, NUT } from './model.js';
+import { WASHER, NUT, tenons } from './model.js';
+import { LIFT, FORSTNER_MAX } from './router.js';
 
 const f = n => (Math.round(n * 10) / 10).toString();
 const thread = p => p.pitch === '1.5' ? 'M10' : 'M10×1';
@@ -77,8 +78,9 @@ export function bom(p, L, plan, cut) {
     { group: 'Jig and tools', rows: [
       ['1', `Plywood or MDF strip ${plan.sled.length} × ${plan.sled.width} × ${f(p.sledT)} mm`, 'routing sled'],
       ['1', 'M10 threaded rod 120 mm + 2 nuts + 2 washers', 'centre pivot pin'],
+      ['1', `Foot block ${LIFT} mm thick, about 40 × 40 mm`, 'sled far end'],
       ['1', `Spoil board at least ${cut.blank + 50} × ${cut.blank + 50} mm`, 'MDF or chipboard'],
-      ['1', `Forstner bit Ø${f(p.tenonD)}`, 'tray recesses'],
+      ...[...new Set([tenons(p).top, tenons(p).low].filter(d => d <= FORSTNER_MAX))].map(d => ['1', `Forstner bit Ø${f(d)}`, 'tray recess']),
       ['1', `Drill bit Ø${f(p.holeD)} (brad point), long`, 'bores'],
       ['—', `Straight bit Ø${f(p.bitD)}, dish bit Ø${f(p.dishBitD)}`, 'you have these'],
       ['—', 'Double-sided tape, clamps, hacksaw, file', ''],
@@ -94,23 +96,30 @@ export function routerSteps(p, L, plan) {
   }${coveRow ? `<tr class="cove"><td>dish bit</td><td>${f(coveRow.centre)} mm</td><td>${f(coveRow.depth)} mm</td><td>${coveRow.passes.map(f).join(' → ')}</td></tr>` : ''}</tbody></table>`;
   return `
 <h3>The sled</h3>
-<p>A strip of plywood ${s.length} × ${s.width} × ${f(p.sledT)} mm. Drill an ${f(p.holeD)} mm pivot hole near one end. Cut a slot along the centre line from ${s.slotFrom} to ${s.slotTo} mm from the pivot, wide enough for the bit. The far end rests directly on the untouched corners of the square blank, about ${s.footAt} mm from the pivot (a strip of smooth tape underneath helps it glide). So every depth below is measured from the blank's surface. Mark the slot every 5 mm from the pivot. Clamp the router over the slot at each ring's radius.</p>
+<p>A strip of plywood ${s.length} × ${s.width} × ${f(p.sledT)} mm. Drill an ${f(p.holeD)} mm pivot hole near one end. Cut a slot along the centre line from ${s.slotFrom} to ${s.slotTo} mm from the pivot, wide enough for the bit. Mark the slot every 5 mm from the pivot, and clamp the router over the slot at each ring's radius.</p>
 ${s.ok ? '' : `<p class="warn">The blank is too small for the sled foot to stay outside the disc. Use a larger blank or a smaller tray.</p>`}
-<p>Pivot: a short M10 rod screwed into the spoil board, through the tray's bore. Set a nut on it so the sled rests on the nut at exactly the blank's surface height. Keep the rod flush with the top of the sled, so the router base can pass over it for the innermost rings.</p>
-<p>Every depth is set on the router as <b>sled thickness ${f(p.sledT)} mm + depth</b>.</p>
+<p>The sled sits ${LIFT} mm above the blank, level at both ends:</p>
+<ul>
+<li><b>Pivot end:</b> an M10 rod screwed into the spoil board, up through the tray's bore. Lock two nuts on it so their top is exactly ${LIFT} mm above the blank's surface; the sled rests on them. The nuts float above the wood, so the bit can cut right up to the bore. Keep the rod's top below the top of the sled, so the router base can pass over it.</li>
+<li><b>Far end:</b> a ${LIFT} mm foot block glued under the sled at about ${s.footAt} mm from the pivot. It rides on the untouched corners of the square blank (smooth tape under it helps it glide).</li>
+</ul>
+<p>Every depth below is measured from the blank's surface. Set it on the router as <b>${f(p.sledT)} sled + ${LIFT} lift + depth</b>, so the bit sticks out ${f(p.sledT + LIFT)} mm + depth below the sled.</p>
 
 <h3>Order of work</h3>
 <ol>
 <li>Cross-cut the ${f(plan.sled.blank)} × ${f(plan.sled.blank)} mm square blank. Mark the centre and drill the Ø${f(p.holeD)} bore straight through (use a drill guide; it must be square to the face).</li>
-<li>Underside face up. Drill the bottom recess with the Forstner bit: Ø${f(p.tenonD)} × ${f(p.tenonH)} mm deep.</li>
+${plan.lowRecess ? '' : `<li>Underside face up. Drill the bottom recess with the Forstner bit: Ø${f(tenons(p).low)} × ${f(p.tenonH)} mm deep.</li>`}
 <li>Screw the blank's corners to the spoil board (outside the foot path) with the pivot rod through the bore.</li>
+${plan.lowRecess ? `<li>Underside face up. Rout the bottom recess, Ø${f(tenons(p).low)} × ${f(p.tenonH)} mm, from the bore outwards. The last ring ends exactly on the recess wall.${tbl(plan.lowRecess)}</li>` : ''}
 <li>Rout the underside rings with the Ø${f(p.bitD)} straight bit, from the inside out. Rings are up to ${f(plan.ringW)} mm wide, narrower where the curve gets steeper. Each is cut to the depth at its inner edge, so steps of at most ${f(plan.maxStep)} mm stay above the curve. You sand them down to the gauge later.
 ${plan.under.length ? tbl(plan.under) : '<p>No underside curve with these settings.</p>'}</li>
 <li>Cut the circle with your normal circle-cutting attachment (no sled needed): bit centre at ${f(plan.cutCentre)} mm from the pivot, down to ${f(plan.throughFirst)} mm. Leave about 1 mm so the disc stays attached.</li>
 <li>Unscrew, flip to the top face, and screw down again on the same pivot hole in the spoil board.</li>
 <li>Rout the flat dish floor with the straight bit, from the inside out. Then cut the cove at the rim with the dish bit centred at ${f(plan.cove.centre)} mm.
 ${tbl(plan.floor, plan.cove)}</li>
-<li>Drill the top recess: Ø${f(p.tenonD)} × ${f(p.tenonH)} mm deep, below the dish floor.</li>
+${plan.topRecess
+  ? `<li>Rout the top recess, Ø${f(tenons(p).top)} × ${f(p.tenonH)} mm below the dish floor, from the bore outwards.${tbl(plan.topRecess)}</li>`
+  : `<li>Drill the top recess with the Forstner bit: Ø${f(tenons(p).top)} × ${f(p.tenonH)} mm deep, below the dish floor.</li>`}
 <li>Put double-sided tape under the disc, then cut the last ~1 mm of the circle from the top.</li>
 <li>Round the top and bottom edges (R${f(p.edgeR)}). Sand the underside steps until the printed underside gauge sits flush all the way round, then the dish. Finish with 240.</li>
 </ol>`;
@@ -123,7 +132,7 @@ export function latheSteps(p, L, cut) {
 <ol>
 <li>Glue ${B.hub.layers} squares of ${B.hub.side} mm (${B.hub.layers * p.trayT} mm tall; the hub needs ${f(B.hub.need)}) and ${B.nub.layers} squares of ${B.nub.side} mm (${B.nub.layers * p.trayT} mm; the nub needs ${f(B.nub.need)}). Alternate the grain direction of each layer by 90° to keep them stable, or keep it aligned for a calmer look. Drill the Ø${f(p.holeD)} bore through each stack after gluing.${B.hub.layers * p.trayT < B.hub.need + 10 ? ' There is little spare length, so glue a scrap block on the top layer (with paper in the joint) for the chuck, and part it off at the end.' : ''}</li>
 <li>Mount on a mandrel or between centres through the bore, so the bore and the outside stay concentric.</li>
-<li>Turn the tenon first: Ø${f(p.tenonD)} × ${f(L.hubTenon)} mm for the hub and ${f(L.nubTenon)} mm for the nub. They're 0.5 mm shorter than the recess, so the shoulder seats. Check the fit in the tray's recess: snug, no glue.</li>
+<li>Turn the tenon first: Ø${f(tenons(p).top)} × ${f(L.hubTenon)} mm for the hub, Ø${f(tenons(p).low)} × ${f(L.nubTenon)} mm for the nub. They're 0.5 mm shorter than the recess, so the shoulder seats. Check the fit in the tray's recess: snug, no glue.</li>
 <li>Turn the profile, checking against the printed 1:1 gauge and the diameter table at each height.</li>
 <li>Sand, oil, and make sure the hub's top face is flat, so the washer seats.</li>
 </ol>`;

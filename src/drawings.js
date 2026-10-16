@@ -1,6 +1,6 @@
 // Dimensioned SVG drawings. Every drawing is built in millimetres, so the
 // same SVG prints at 1:1 when given a width in mm.
-import { trayGeometry, hubGeometry, nubGeometry, WASHER, NUT } from './model.js';
+import { trayGeometry, hubGeometry, nubGeometry, tenons, WASHER, NUT } from './model.js';
 
 const f = n => (Math.round(n * 10) / 10).toString();
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -127,19 +127,21 @@ export function trayDrawing(p) {
 
   const ra = t.R - Math.max(p.dishInset + p.dishBitD + 6, 34);
   const A = detail(p, t, 'DETAIL A — rim, 3:1', ra, t.R + 3, (d, S) => {
-    d.dimH(S.X(t.rimInner), S.Y(t.T), S.X(t.R), S.Y(t.T), S.Y(t.T) - 9 * d.k, `${f(p.dishInset)} rim`);
+    if (p.dishInset > 0) d.dimH(S.X(t.rimInner), S.Y(t.T), S.X(t.R), S.Y(t.T), S.Y(t.T) - 9 * d.k, `${f(p.dishInset)} rim`);
     d.dimV(S.X(t.rc), S.Y(t.floorZ), S.X(t.rc), S.Y(t.T), S.X(ra) - 4 * d.k, `${f(t.dish)} dish`);
     d.dimV(S.X(t.R), S.Y(t.lift), S.X(t.R), S.Y(t.T), S.X(t.R) + 8 * d.k, `${f(p.edgeT)} edge`);
     d.note(S.X(t.rc + p.dishBitD * 0.3), S.Y(t.floorZ + 0.6), S.X(t.rc) - 2, S.Y(0) + 10 * d.k, `cove R${f(p.dishBitD / 2)} (dish bit)`);
     d.note(S.X(t.R - p.edgeR * 0.3), S.Y(t.T - p.edgeR * 0.3), S.X(t.R) + 4 * d.k, S.Y(t.T) - 9 * d.k, `R${f(p.edgeR)}`);
   });
-  const rb = Math.max(p.tenonD / 2 + 12, 28);
+  const tn = tenons(p), tr = tn.top / 2, lr = tn.low / 2;
+  const rb = Math.max(Math.max(tr, lr) + 12, 28);
   const B = detail(p, t, 'DETAIL B — centre, 3:1', -rb, rb, (d, S) => {
-    d.dimH(S.X(-p.tenonD / 2), S.Y(t.floorZ), S.X(p.tenonD / 2), S.Y(t.floorZ), S.Y(t.T) - 6 * d.k, `Ø${f(p.tenonD)} recess`);
-    d.dimH(S.X(-p.holeD / 2), S.Y(0), S.X(p.holeD / 2), S.Y(0), S.Y(0) + 9 * d.k, `Ø${f(p.holeD)} bore`);
-    d.dimV(S.X(p.tenonD / 2), S.Y(t.floorZ - p.tenonH), S.X(p.tenonD / 2), S.Y(t.floorZ), S.X(rb) + 6 * d.k, `${f(p.tenonH)}`);
-    d.dimV(S.X(p.tenonD / 2), S.Y(0), S.X(p.tenonD / 2), S.Y(p.tenonH), S.X(rb) + 6 * d.k, `${f(p.tenonH)}`);
-    d.dimV(S.X(-p.tenonD / 2), S.Y(p.tenonH), S.X(-p.tenonD / 2), S.Y(t.floorZ - p.tenonH), S.X(-rb) - 6 * d.k, `${f(t.centreT)}`);
+    d.dimH(S.X(-tr), S.Y(t.floorZ), S.X(tr), S.Y(t.floorZ), S.Y(t.T) - 6 * d.k, `Ø${f(tn.top)} recess`);
+    d.dimH(S.X(-lr), S.Y(0), S.X(lr), S.Y(0), S.Y(0) + 9 * d.k, `Ø${f(tn.low)} recess`);
+    d.dimH(S.X(-p.holeD / 2), S.Y(p.tenonH), S.X(p.holeD / 2), S.Y(p.tenonH), S.Y(0) + 18 * d.k, `Ø${f(p.holeD)} bore`);
+    d.dimV(S.X(tr), S.Y(t.floorZ - p.tenonH), S.X(tr), S.Y(t.floorZ), S.X(rb) + 6 * d.k, `${f(p.tenonH)}`);
+    d.dimV(S.X(lr), S.Y(0), S.X(lr), S.Y(p.tenonH), S.X(rb) + 6 * d.k, `${f(p.tenonH)}`);
+    d.dimV(S.X(-Math.min(tr, lr)), S.Y(p.tenonH), S.X(-Math.min(tr, lr)), S.Y(t.floorZ - p.tenonH), S.X(-rb) - 6 * d.k, `${f(t.centreT)}`);
   });
   return `<div class="tray-main">${sh.svg()}</div><div class="tray-details">${A}${B}</div>`;
 }
@@ -152,9 +154,9 @@ export function hubDrawing(p) {
   sh.centre(0, -g.H - 10, g.tenonLen + 8);
   sh.dimH(X(-g.topR), Y(g.H), X(g.topR), Y(g.H), Y(g.H) - 10, `Ø${f(p.hubTopD)}`);
   sh.dimH(X(-g.baseR), Y(0), X(g.baseR), Y(0), Y(-g.tenonLen) + 16, `Ø${f(p.hubBaseD)} foot`);
-  sh.dimH(X(-p.tenonD / 2), Y(-g.tenonLen), X(p.tenonD / 2), Y(-g.tenonLen), Y(-g.tenonLen) + 8, `Ø${f(p.tenonD)} tenon`);
+  sh.dimH(X(-g.tenonR), Y(-g.tenonLen), X(g.tenonR), Y(-g.tenonLen), Y(-g.tenonLen) + 8, `Ø${f(2 * g.tenonR)} tenon`);
   sh.dimV(X(g.topR), Y(g.H), X(g.baseR), Y(0), X(g.baseR) + 10, `${f(g.H)}`);
-  sh.dimV(X(p.tenonD / 2), Y(-g.tenonLen), X(p.tenonD / 2), Y(0), X(g.baseR) + 10, `${f(g.tenonLen)}`);
+  sh.dimV(X(g.tenonR), Y(-g.tenonLen), X(g.tenonR), Y(0), X(g.baseR) + 10, `${f(g.tenonLen)}`);
   sh.dimV(X(-g.baseR), Y(0), X(-g.baseR), Y(p.hubFoot), X(-g.baseR) - 8, `${f(p.hubFoot)}`);
   sh.note(X(-p.holeD / 2), Y(g.H * 0.6), X(-g.baseR) + 4, Y(g.H * 0.85), `Ø${f(p.holeD)} bore through`);
   sh.text(0, Y(-g.tenonLen) + 28, 'UPPER HUB — section, 1:1 (grain along the axis)', { size: 3.8, cls: 'title' });
@@ -167,10 +169,10 @@ export function nubDrawing(p) {
   const { X, Y } = section(sh, g.profile, 0, 0);
   sh.centre(0, -g.tenonLen - 8, g.L + 8);
   sh.dimH(X(-g.topR), Y(0), X(g.topR), Y(0), Y(g.tenonLen) - 12, `Ø${f(p.nubTopD)}`);
-  sh.dimH(X(-p.tenonD / 2), Y(g.tenonLen), X(p.tenonD / 2), Y(g.tenonLen), Y(g.tenonLen) - 5, `Ø${f(p.tenonD)} tenon`);
+  sh.dimH(X(-g.tenonR), Y(g.tenonLen), X(g.tenonR), Y(g.tenonLen), Y(g.tenonLen) - 5, `Ø${f(2 * g.tenonR)} tenon`);
   sh.dimH(X(-g.tipR), Y(-g.L), X(g.tipR), Y(-g.L), Y(-g.L) + 9, `Ø${f(p.nubTipD)}`);
   sh.dimV(X(g.topR), Y(0), X(g.tipR), Y(-g.L), X(g.topR) + 10, `${f(g.L)}`);
-  sh.dimV(X(p.tenonD / 2), Y(0), X(p.tenonD / 2), Y(g.tenonLen), X(g.topR) + 10, `${f(g.tenonLen)}`);
+  sh.dimV(X(g.tenonR), Y(0), X(g.tenonR), Y(g.tenonLen), X(g.topR) + 10, `${f(g.tenonLen)}`);
   sh.note(X(-p.holeD / 2), Y(-g.L * 0.5), X(-g.topR) - 6, Y(-g.L * 0.7), `Ø${f(p.holeD)} bore`);
   sh.text(0, Y(-g.L) + 24, 'LOWER NUB — section, 1:1', { size: 3.8, cls: 'title' });
   return sh.svg();
