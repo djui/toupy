@@ -182,14 +182,22 @@ window.addEventListener('afterprint', () => {
 
 // ---------------------------------------------------------------- wiring
 const tip = $('#tip');
-const viewer = new Viewer($('#viewport'), {
-  onHover(info, px) {
-    if (!info || !px) { tip.hidden = true; return; }
-    tip.hidden = false;
-    tip.textContent = info.label;
-    tip.style.transform = `translate(${px.x + 14}px, ${px.y + 14}px)`;
-  },
-});
+// Without WebGL the 3D tab shows a note; drawings and plans still work.
+let viewer;
+try {
+  viewer = new Viewer($('#viewport'), {
+    onHover(info, px) {
+      if (!info || !px) { tip.hidden = true; return; }
+      tip.hidden = false;
+      tip.textContent = info.label;
+      tip.style.transform = `translate(${px.x + 14}px, ${px.y + 14}px)`;
+    },
+  });
+} catch (err) {
+  console.error(err);
+  $('#viewport').insertAdjacentHTML('beforeend', '<p class="nogl">This browser cannot show 3D (WebGL is off). The other tabs still work.</p>');
+  viewer = { build() {}, resize() {}, frame() {}, setExplode() {}, setCut() {} };
+}
 
 function showTab(id) {
   for (const b of document.querySelectorAll('.tabs button')) b.setAttribute('aria-selected', b.dataset.tab === id);
