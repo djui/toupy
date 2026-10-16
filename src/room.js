@@ -36,15 +36,15 @@ function wallX(z0, z1, x, H, mat, facing = 1) {
 // toward the viewer. Each plank is cut from a random spot of the sheet photo
 // (grain along its length), lightened, with a little brightness variation and
 // fine dark joints from the underlay showing between planks.
-function herringboneFloor({ xLeft, xRight, zBack, zFront }, oakTexture) {
+function herringboneFloor({ xLeft, xRight, zBack, zFront }, oakTexture, cache) {
   const W = 90, L = 450, GAP = 0.6;
   let seed = 11;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
   // Lightened copy of the photo: unfinished oak is paler than the sheet.
-  let map = oakTexture;
+  let map = cache.floorMap || oakTexture;
   const img = oakTexture.image;
-  if (img && img.complete !== false && img.width) {
+  if (!cache.floorMap && img && img.complete !== false && img.width) {
     const c = document.createElement('canvas');
     c.width = 1024; c.height = Math.round(1024 * img.height / img.width);
     const ctx = c.getContext('2d');
@@ -53,6 +53,7 @@ function herringboneFloor({ xLeft, xRight, zBack, zFront }, oakTexture) {
     map = new THREE.CanvasTexture(c);
     map.colorSpace = THREE.SRGBColorSpace;
     map.anisotropy = 8;
+    cache.floorMap = map; // reused, so rebuilding the room doesn't re-upload it
   }
 
   // Herringbone in a frame turned 45° from the room: H planks on a staircase
@@ -74,7 +75,7 @@ function herringboneFloor({ xLeft, xRight, zBack, zFront }, oakTexture) {
     if (along === 'x') uv.push(u0, v0, u0, v0 + lv, u0 + uw, v0 + lv, u0 + uw, v0);
     else uv.push(u0, v0, u0 + uw, v0, u0 + uw, v0 + lv, u0, v0 + lv);
     const k = 0.86 + rnd() * 0.2, warm = (rnd() - 0.5) * 0.04;
-    for (let i = 0; i < 4; i++) col.push(k + warm, k, k - warm);
+    for (let i = 0; i < 4; i++) col.push(k + warm, k, k - warm, 1);
     idx.push(base, base + 2, base + 1, base, base + 3, base + 2);
   };
   const ext = Math.max(xRight - xLeft, zFront - zBack) * 1.6;
@@ -87,7 +88,8 @@ function herringboneFloor({ xLeft, xRight, zBack, zFront }, oakTexture) {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  // RGBA: the path tracer turns 3-channel colours black when it merges meshes
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
   geo.setIndex(idx);
   geo.computeVertexNormals();
   const planks = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map, vertexColors: true, roughness: 0.62 }));
@@ -102,7 +104,7 @@ function herringboneFloor({ xLeft, xRight, zBack, zFront }, oakTexture) {
   return g;
 }
 
-export function buildRoom(p, oakTexture) {
+export function buildRoom(p, oakTexture, cache = {}) {
   const g = new THREE.Group();
   const H = p.ceilingH;
   const R = p.trayD / 2;
@@ -118,15 +120,15 @@ export function buildRoom(p, oakTexture) {
   const gold = new THREE.MeshStandardMaterial({ color: 0xc9a25a, metalness: 1, roughness: 0.35 });
   const mirror = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.02 });
 
-  // Plan: the door wall sits a few centimetres behind the tray; right of the
+  // Plan: the door wall sits 14 cm behind the tray; right of the
   // table the wall steps back to the beige wall; cupboards close the right.
-  const zDoor = -(R + 60);
+  const zDoor = -(R + 140);
   const step = 600;
   const zBack = zDoor - step;
-  const xCorner = 60;
-  const xLeft = -2700, xRight = 2700, zFront = 6500;
+  const xCorner = 210;
+  const xLeft = -2550, xRight = 2850, zFront = 6500;
 
-  g.add(herringboneFloor({ xLeft, xRight, zBack, zFront }, oakTexture));
+  g.add(herringboneFloor({ xLeft, xRight, zBack, zFront }, oakTexture, cache));
 
   // ceiling, facing down
   const ceil = plane(xRight - xLeft, zFront - zBack, ceilingMat);
@@ -146,7 +148,7 @@ export function buildRoom(p, oakTexture) {
   g.add(box(skirtD, skirt, step, white, xCorner + skirtD / 2, skirt / 2, (zBack + zDoor) / 2));
 
   // front door: black frame, dark wine-red leaf, lever handle
-  const doorW = 900, doorH = 2100, doorX = -1250, fw = 70;
+  const doorW = 900, doorH = 2100, doorX = -1100, fw = 70;
   g.add(box(doorW + 2 * fw, fw, 30, frameBlack, doorX, doorH + fw / 2, zDoor + 15));
   g.add(box(fw, doorH, 30, frameBlack, doorX - doorW / 2 - fw / 2, doorH / 2, zDoor + 15));
   g.add(box(fw, doorH, 30, frameBlack, doorX + doorW / 2 + fw / 2, doorH / 2, zDoor + 15));
@@ -163,6 +165,14 @@ export function buildRoom(p, oakTexture) {
   g.add(box(105, 230, 45, std(0xe9e0cc, 0.5), ix, iy, zDoor + 22));
   g.add(box(70, 190, 20, std(0xded3bb, 0.5), ix, iy, zDoor + 55));
   g.add(box(40, 60, 12, std(0xd8ccb2, 0.5), ix, iy - 160, zDoor + 8));
+
+  // white light switches below the intercom: a double plate, two rockers each
+  const swMat = std(0xf4f2ee, 0.4), rocker = std(0xfbfaf8, 0.3);
+  for (const sy of [1080, 1170]) {
+    g.add(box(86, 86, 10, swMat, ix, sy, zDoor + 5));
+    g.add(box(34, 56, 6, rocker, ix - 19, sy, zDoor + 12));
+    g.add(box(34, 56, 6, rocker, ix + 19, sy, zDoor + 12));
+  }
 
   // electrical cabinet: white, on the short wall of the step, facing right
   const cz = (zDoor + zBack) / 2, cy = 1500, cw = 440, ch = 900;

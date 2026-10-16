@@ -158,6 +158,7 @@ export class Viewer {
       this.pt.lowResScale = 0.35;
     }
     this.rt = on;
+    this.lookKey = null;
     this.look();
     if (this.hovered) { this.hovered.material = this.matFor(this.hovered); this.hovered = null; }
     if (on) this.dirtyAt = 1;
@@ -178,7 +179,11 @@ export class Viewer {
     const roomEnv = room && !this.rt && this.roomEnv;
     this.scene.environment = roomEnv || this.studioEnv;
     this.scene.environmentIntensity = roomEnv ? 1 : 0.55;
-    if (this.rt) this.dirtyAt = performance.now();
+    // Rebuilding the ray tracer's scene restarts the render, so only when
+    // something it sees has changed.
+    const key = [dark, room, this.rt, this.scene.environment?.uuid, this.room?.group.uuid].join();
+    if (this.rt && key !== this.lookKey) this.dirtyAt = performance.now();
+    this.lookKey = key;
   }
 
   setRoom(on) {
@@ -209,7 +214,8 @@ export class Viewer {
 
   rebuildRoom() {
     this.removeRoom();
-    this.room = buildRoom(this.p, this.oak);
+    this.roomCache ??= {};
+    this.room = buildRoom(this.p, this.oak, this.roomCache);
     this.scene.add(this.room.group);
     // Snapshot the room from the table for reflections in the normal view.
     if (!this.cubeRT) {
