@@ -1,35 +1,14 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { WebGLPathTracer, ProceduralEquirectTexture } from 'three-gpu-pathtracer';
+import oakSheet from '../assets/oak-sheet.webp';
 import { partGeometries } from './parts3d.js';
 import { WASHER, NUT } from './model.js';
 
-function grainTexture() {
-  const c = document.createElement('canvas');
-  c.width = c.height = 1024;
-  const g = c.getContext('2d');
-  g.fillStyle = '#c99d6b';
-  g.fillRect(0, 0, 1024, 1024);
-  let seed = 7;
-  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < 260; i++) {
-    const x0 = rnd() * 1024, amp = 2 + rnd() * 10, freq = 1 + rnd() * 3, ph = rnd() * 6.28;
-    g.strokeStyle = `rgba(${110 + rnd() * 40 | 0},${70 + rnd() * 30 | 0},${35 + rnd() * 20 | 0},${0.05 + rnd() * 0.18})`;
-    g.lineWidth = 0.6 + rnd() * 2.4;
-    g.beginPath();
-    for (let y = 0; y <= 1024; y += 16) {
-      const x = x0 + Math.sin(y / 1024 * Math.PI * 2 * freq + ph) * amp;
-      y ? g.lineTo(x, y) : g.moveTo(x, y);
-    }
-    g.stroke();
-  }
-  // medullary ray flecks typical of oak
-  for (let i = 0; i < 500; i++) {
-    g.fillStyle = `rgba(235,205,160,${0.08 + rnd() * 0.12})`;
-    g.fillRect(rnd() * 1024, rnd() * 1024, 1 + rnd() * 2, 4 + rnd() * 14);
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+// Photo of the real oak sheet (600 × 800 mm), bundled so the page also works
+// when opened from disk.
+function oakTexture(onLoad) {
+  const t = new THREE.TextureLoader().load(oakSheet, onLoad);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
   return t;
@@ -68,7 +47,7 @@ export class Viewer {
     this.onSamples = onSamples;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMapping = THREE.NeutralToneMapping; // keeps the oak photo's colours true
     el.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
@@ -77,8 +56,8 @@ export class Viewer {
     const dark = matchMedia('(prefers-color-scheme: dark)');
     // Ray-traced, the background matches the lit floor, so there's no horizon.
     const bg = () => {
-      this.scene.background = new THREE.Color(this.rt ? (dark.matches ? 0x34302b : 0xf7f5f1) : (dark.matches ? 0x2a2622 : 0xebe6de));
-      this.floor.material.color.set(dark.matches ? 0x3a3530 : 0xf1ece4);
+      this.scene.background = new THREE.Color(this.rt ? (dark.matches ? 0x34302b : 0xeeedeb) : (dark.matches ? 0x2a2622 : 0xebe6de));
+      this.floor.material.color.set(dark.matches ? 0x3a3530 : 0xd9d8d6);
       if (this.pt?.scene) { this.pt.updateEnvironment(); this.pt.updateMaterials(); }
     };
 
@@ -90,15 +69,15 @@ export class Viewer {
     sun.position.set(800, 3000, 1200);
     this.scene.add(sun);
 
-    const grain = grainTexture();
+    const grain = oakTexture(() => { if (this.pt?.scene) this.pt.updateMaterials(); });
     this.mats = {
-      oak: new THREE.MeshStandardMaterial({ map: grain, color: 0xf2e6d6, roughness: 0.55, metalness: 0 }),
+      oak: new THREE.MeshStandardMaterial({ map: grain, roughness: 0.6, metalness: 0 }),
       brass: new THREE.MeshStandardMaterial({ color: 0xe3b866, metalness: 1, roughness: 0.16 }),
       steel: new THREE.MeshStandardMaterial({ color: 0xb8b8b8, metalness: 1, roughness: 0.35 }),
     };
     // Cut faces: end grain is a little darker and duller than the face.
     this.caps = {
-      oak: new THREE.MeshStandardMaterial({ color: 0xb48655, roughness: 0.85 }),
+      oak: new THREE.MeshStandardMaterial({ color: 0x9c8468, roughness: 0.85 }),
       brass: this.mats.brass,
       steel: this.mats.steel,
     };
@@ -167,6 +146,7 @@ export class Viewer {
     if (on && !this.pt) {
       this.pt = new WebGLPathTracer(this.renderer);
       this.pt.tiles.set(2, 2);
+      this.pt.textureSize.set(2048, 2048);
       this.pt.bounces = 6;
       this.pt.filterGlossyFactor = 0.4;
       this.pt.minSamples = 2;

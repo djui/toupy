@@ -36,20 +36,27 @@ function withUV(part, fn, arg) {
   return part;
 }
 
-// Top-down planar UVs: flat-sawn grain running across the tray.
-function planarUV(geo, span) {
+// The oak texture is a photo of the whole sheet. The tray maps onto the
+// sheet where it's cut from (centred in the square blank at the top), so it
+// shows the grain it will really have.
+function sheetUV(geo, p) {
+  const c = Math.min(p.sheetW, p.sheetL) / 2;
   const pos = geo.attributes.position, uv = geo.attributes.uv;
-  for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / span + 0.5, pos.getZ(i) / span + 0.5);
+  for (let i = 0; i < pos.count; i++) uv.setXY(i, (c + pos.getX(i)) / p.sheetW, 1 - (c + pos.getZ(i)) / p.sheetL);
   uv.needsUpdate = true;
   return geo;
 }
 
-// Around-and-up UVs: grain along the axis, as for spindle-turned parts.
-function spindleUV(geo, len) {
+// Hub and nub come from the strip below the blank: around the part maps
+// across the strip, up the part maps along the grain.
+function stripUV(geo, { p, len, x0 }) {
+  const top = Math.min(p.sheetW, p.sheetL) + 6;
+  const span = Math.max(20, p.sheetL - top - 6);
   const pos = geo.attributes.position, uv = geo.attributes.uv;
   for (let i = 0; i < pos.count; i++) {
-    const a = Math.atan2(pos.getZ(i), pos.getX(i));
-    uv.setXY(i, (a / (2 * Math.PI) + 0.5) * 2, pos.getY(i) / len);
+    const a = Math.atan2(pos.getZ(i), pos.getX(i)) / (2 * Math.PI) + 0.5;
+    const y = Math.min(1, Math.max(0, (pos.getY(i) + len * 0.1) / (len * 1.2)));
+    uv.setXY(i, x0 + a * 0.45, 1 - (top + y * span) / p.sheetL);
   }
   uv.needsUpdate = true;
   return geo;
@@ -88,9 +95,9 @@ export function partGeometries(p, L, half = false) {
   const tubeIn = p.tubeD / 2 - 0.8;
   const washer = ringProfile(WASHER.hole / 2, WASHER.d / 2, WASHER.t);
   return {
-    tray: { ...withUV(turned(tray.profile, 192, half), planarUV, 700), kind: 'oak' },
-    hub: { ...withUV(turned(hub.profile, SEG, half), spindleUV, 160), kind: 'oak' },
-    nub: { ...withUV(turned(nubG.profile, SEG, half), spindleUV, 160), kind: 'oak' },
+    tray: { ...withUV(turned(tray.profile, 192, half), sheetUV, p), kind: 'oak' },
+    hub: { ...withUV(turned(hub.profile, SEG, half), stripUV, { p, len: p.hubH, x0: 0.03 }), kind: 'oak' },
+    nub: { ...withUV(turned(nubG.profile, SEG, half), stripUV, { p, len: p.nubL, x0: 0.52 }), kind: 'oak' },
     washerTop: { ...turned(washer, 64, half), kind: 'brass' },
     washerLow: { ...turned(washer, 64, half), kind: 'brass' },
     nut: { ...nut(half), kind: 'brass' },
