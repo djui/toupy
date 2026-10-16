@@ -72,13 +72,13 @@ export class Viewer {
     const grain = oakTexture(() => { if (this.pt?.scene) this.pt.updateMaterials(); });
     this.mats = {
       // The photo came out cooler than the wood looks; warm it towards honey brown.
-      oak: new THREE.MeshStandardMaterial({ map: grain, color: 0xf7d2a8, roughness: 0.6, metalness: 0 }),
+      oak: new THREE.MeshStandardMaterial({ map: grain, color: 0xfbe9d4, roughness: 0.6, metalness: 0 }),
       brass: new THREE.MeshStandardMaterial({ color: 0xe3b866, metalness: 1, roughness: 0.16 }),
       steel: new THREE.MeshStandardMaterial({ color: 0xb8b8b8, metalness: 1, roughness: 0.35 }),
     };
     // Cut faces: end grain is a little darker and duller than the face.
     this.caps = {
-      oak: new THREE.MeshStandardMaterial({ color: 0xa47a52, roughness: 0.85 }),
+      oak: new THREE.MeshStandardMaterial({ color: 0xa07f5d, roughness: 0.85 }),
       brass: this.mats.brass,
       steel: this.mats.steel,
     };
