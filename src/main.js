@@ -257,7 +257,7 @@ try {
 } catch (err) {
   console.error(err);
   $('#viewport').insertAdjacentHTML('beforeend', '<p class="nogl">This browser cannot show 3D (WebGL is off). The other tabs still work.</p>');
-  viewer = { build() {}, resize() {}, frame() {}, setExplode() {}, setCut() {}, setRayTraced() {} };
+  viewer = { build() {}, resize() {}, frame() {}, setExplode() {}, setCut() {}, setRayTraced() {}, setRoom() {} };
 }
 
 function showTab(id) {
@@ -284,6 +284,7 @@ document.addEventListener('click', e => {
 $('#explode').addEventListener('input', e => viewer.setExplode(Number(e.target.value)));
 $('#cut').addEventListener('change', e => viewer.setCut(e.target.checked));
 $('#rt').addEventListener('change', e => viewer.setRayTraced(e.target.checked));
+$('#room').addEventListener('change', e => viewer.setRoom(e.target.checked));
 window.addEventListener('hashchange', () => { P = load(); syncInputs(); update(); });
 
 document.body.insertAdjacentHTML('afterbegin', `<svg class="defs" aria-hidden="true">${DEFS}</svg>`);

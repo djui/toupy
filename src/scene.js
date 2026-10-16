@@ -4,6 +4,8 @@ import { WebGLPathTracer, ProceduralEquirectTexture } from 'three-gpu-pathtracer
 import oakSheet from '../assets/oak-sheet.webp';
 import { partGeometries } from './parts3d.js';
 import { WASHER, NUT } from './model.js';
+import { buildRoom } from './room.js';
+import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 
 // Photo of the real oak sheet (600 × 800 mm), bundled so the page also works
 // when opened from disk.
@@ -51,25 +53,23 @@ export class Viewer {
     el.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.scene.environment = studioEnvironment();
+    this.studioEnv = studioEnvironment();
+    this.scene.environment = this.studioEnv;
     this.scene.environmentIntensity = 0.55;
-    const dark = matchMedia('(prefers-color-scheme: dark)');
-    // Ray-traced, the background matches the lit floor, so there's no horizon.
-    const bg = () => {
-      this.scene.background = new THREE.Color(this.rt ? (dark.matches ? 0x34302b : 0xeeedeb) : (dark.matches ? 0x2a2622 : 0xebe6de));
-      this.floor.material.color.set(dark.matches ? 0x3a3530 : 0xd9d8d6);
-      if (this.pt?.scene) { this.pt.updateEnvironment(); this.pt.updateMaterials(); }
-    };
+    this.dark = matchMedia('(prefers-color-scheme: dark)');
+    this.pmrem = new THREE.PMREMGenerator(this.renderer);
+    RectAreaLightUniformsLib.init();
 
     this.camera = new THREE.PerspectiveCamera(35, 1, 20, 20000);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
 
-    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-    sun.position.set(800, 3000, 1200);
-    this.scene.add(sun);
+    this.sun = new THREE.DirectionalLight(0xffffff, 1.2);
+    this.sun.position.set(800, 3000, 1200);
+    this.scene.add(this.sun);
 
-    const grain = oakTexture(() => { if (this.pt?.scene) this.pt.updateMaterials(); });
+    const grain = oakTexture(() => { if (this.rt) this.dirtyAt = performance.now(); });
+    this.oak = grain;
     this.mats = {
       // The photo came out cooler than the wood looks; warm it towards honey brown.
       oak: new THREE.MeshStandardMaterial({ map: grain, color: 0xfbe9d4, roughness: 0.6, metalness: 0 }),
@@ -98,12 +98,13 @@ export class Viewer {
       new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false }));
     this.ceiling.rotation.x = Math.PI / 2;
     this.scene.add(this.ceiling);
-    this.bg = bg;
-    bg(); dark.addEventListener('change', bg);
 
     this.explode = 0;
     this.cut = false;
     this.rt = false;
+    this.roomOn = false;
+    this.look();
+    this.dark.addEventListener('change', () => this.look());
     this.items = [];
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2(9, 9);
@@ -157,12 +158,72 @@ export class Viewer {
       this.pt.lowResScale = 0.35;
     }
     this.rt = on;
-    this.grid.visible = this.ceiling.visible = !on;
-    this.floor.visible = on;
-    this.bg();
+    this.look();
     if (this.hovered) { this.hovered.material = this.matFor(this.hovered); this.hovered = null; }
     if (on) this.dirtyAt = 1;
     else this.onSamples?.(null);
+  }
+
+  // Background, helpers and environment for the current mode. Ray-traced
+  // without the room, the backdrop matches the lit floor so there's no horizon.
+  look() {
+    const dark = this.dark.matches, room = this.roomOn;
+    this.scene.background = new THREE.Color(room ? 0xe9e6e0 : this.rt ? (dark ? 0x34302b : 0xeeedeb) : (dark ? 0x2a2622 : 0xebe6de));
+    this.floor.material.color.set(dark ? 0x3a3530 : 0xd9d8d6);
+    this.grid.visible = this.ceiling.visible = !this.rt && !room;
+    this.floor.visible = this.rt && !room;
+    this.sun.visible = !room; // indoors the ceiling light and the open side light the room
+    // Normal view in the room: the brass reflects a snapshot of the room.
+    // Ray-traced, it reflects the real room, lit through the open side.
+    const roomEnv = room && !this.rt && this.roomEnv;
+    this.scene.environment = roomEnv || this.studioEnv;
+    this.scene.environmentIntensity = roomEnv ? 1 : 0.55;
+    if (this.rt) this.dirtyAt = performance.now();
+  }
+
+  setRoom(on) {
+    this.roomOn = on;
+    const c = this.controls;
+    if (on) {
+      this.rebuildRoom();
+      // stay inside: in front of the walls, under the ceiling
+      c.minAzimuthAngle = -1.25; c.maxAzimuthAngle = 1.25;
+      c.maxPolarAngle = 1.8; c.maxDistance = 3300;
+    } else {
+      this.removeRoom();
+      c.minAzimuthAngle = -Infinity; c.maxAzimuthAngle = Infinity;
+      c.maxPolarAngle = Math.PI; c.maxDistance = Infinity;
+    }
+    this.look();
+    this.frame('table');
+  }
+
+  removeRoom() {
+    if (!this.room) return;
+    this.scene.remove(this.room.group);
+    this.room.group.traverse(o => { o.geometry?.dispose(); });
+    this.room = null;
+    this.roomEnv?.dispose?.();
+    this.roomEnv = null;
+  }
+
+  rebuildRoom() {
+    this.removeRoom();
+    this.room = buildRoom(this.p, this.oak);
+    this.scene.add(this.room.group);
+    // Snapshot the room from the table for reflections in the normal view.
+    if (!this.cubeRT) {
+      this.cubeRT = new THREE.WebGLCubeRenderTarget(256, { type: THREE.HalfFloatType });
+      this.cubeCam = new THREE.CubeCamera(10, 20000, this.cubeRT);
+    }
+    const wasRoom = this.roomOn;
+    this.roomOn = true; this.look();
+    this.cubeCam.position.set(0, this.L.trayTop + 150, 0);
+    this.root.visible = false;
+    this.cubeCam.update(this.renderer, this.scene);
+    this.root.visible = true;
+    this.roomEnv = this.pmrem.fromCubemap(this.cubeRT.texture).texture;
+    this.roomOn = wasRoom;
   }
 
   resize() {
@@ -214,6 +275,7 @@ export class Viewer {
     add('rod', 'rod', L.rodBottom, [p.trayD / 2 + 80, 0, 0], info.rod);
     this.ceiling.position.y = p.ceilingH;
     this.L = L; this.p = p;
+    if (this.roomOn) { this.rebuildRoom(); this.look(); }
     this.applyExplode();
     if (!this.framed) { this.frame('table'); this.framed = true; }
   }
@@ -231,7 +293,12 @@ export class Viewer {
 
   frame(which) {
     const L = this.L, p = this.p;
-    if (which === 'whole') {
+    if (this.roomOn) {
+      // From the dining table, looking at the entrance, as in the photo.
+      const whole = which === 'whole';
+      this.controls.target.set(0, whole ? p.ceilingH * 0.45 : L.trayTop - 60, 0);
+      this.camera.position.set(whole ? 500 : 380, whole ? 1500 : 1400, whole ? 3200 : 2300);
+    } else if (which === 'whole') {
       this.controls.target.set(0, p.ceilingH / 2, 0);
       this.camera.position.set(2600, p.ceilingH * 0.75, 3600);
     } else {

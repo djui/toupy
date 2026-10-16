@@ -7,7 +7,7 @@ An interactive 3D blueprint for building a hanging tray table, after the
 
 - 3D view with an explode slider, cut-away, hover info and a ray-traced mode
   ([three-gpu-pathtracer](https://github.com/gkjohnson/three-gpu-pathtracer)) with soft shadows
-  and real brass reflections
+  and real brass reflections, in a studio or in a model of the entrance area it will hang in
 - dimensioned section drawings of the tray, upper hub and lower nub
 - 1:1 A4 templates (profile gauges for routing and turning)
 - STL export per part
