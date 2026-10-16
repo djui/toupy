@@ -254,13 +254,14 @@ try {
     },
     onSamples(n) {
       $('#samples').textContent = n == null ? '' : n === 'preparing' ? 'Preparing the scene…'
-        : n === 'compiling' ? 'Compiling (the first time takes a few seconds)…' : `${n} samples`;
+        : n === 'compiling' ? 'Compiling (the first time takes a few seconds)…' : typeof n === 'string' ? n : `${n} samples`;
     },
+    onPause(p) { $('#rtPause').textContent = p ? 'Resume' : 'Pause'; },
   });
 } catch (err) {
   console.error(err);
   $('#viewport').insertAdjacentHTML('beforeend', '<p class="nogl">This browser cannot show 3D (WebGL is off). The other tabs still work.</p>');
-  viewer = { build() {}, resize() {}, frame() {}, setExplode() {}, setCut() {}, setRayTraced() {}, setRoom() {} };
+  viewer = { build() {}, resize() {}, frame() {}, setExplode() {}, setCut() {}, setRayTraced() {}, setRoom() {}, setPaused() {} };
 }
 
 function showTab(id) {
@@ -286,7 +287,8 @@ document.addEventListener('click', e => {
 });
 $('#explode').addEventListener('input', e => viewer.setExplode(Number(e.target.value)));
 $('#cut').addEventListener('change', e => viewer.setCut(e.target.checked));
-$('#rt').addEventListener('change', e => viewer.setRayTraced(e.target.checked));
+$('#rt').addEventListener('change', e => { viewer.setRayTraced(e.target.checked); $('#rtPause').hidden = !e.target.checked; });
+$('#rtPause').addEventListener('click', () => viewer.setPaused(!viewer.paused));
 $('#room').addEventListener('change', e => viewer.setRoom(e.target.checked));
 window.addEventListener('hashchange', () => { P = load(); syncInputs(); update(); });
 

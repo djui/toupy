@@ -43,10 +43,11 @@ function studioEnvironment() {
 }
 
 export class Viewer {
-  constructor(el, { onHover, onSamples } = {}) {
+  constructor(el, { onHover, onSamples, onPause } = {}) {
     this.el = el;
     this.onHover = onHover;
     this.onSamples = onSamples;
+    this.onPause = onPause;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.NeutralToneMapping; // keeps the oak photo's colours true
@@ -131,6 +132,12 @@ export class Viewer {
 
   render(moved) {
     if (!this.rt) { this.renderer.render(this.scene, this.camera); return; }
+    // Paused: draw nothing, so the canvas keeps the last image and the GPU
+    // rests. Moving the camera or changing the scene picks it up again.
+    if (this.paused) {
+      if (!moved && !this.dirtyAt) return;
+      this.setPaused(false);
+    }
     // Rebuilding the ray tracer's scene takes a moment, so wait until the
     // sliders settle; draw the normal view meanwhile.
     if (this.dirtyAt && performance.now() - this.dirtyAt > 150) {
@@ -142,6 +149,12 @@ export class Viewer {
     if (this.dirtyAt) { this.renderer.render(this.scene, this.camera); this.onSamples?.('preparing'); return; }
     this.pt.renderSample();
     this.onSamples?.(this.pt.isCompiling ? 'compiling' : Math.floor(this.pt.samples));
+  }
+
+  setPaused(on) {
+    this.paused = on && this.rt;
+    this.onPause?.(this.paused);
+    if (this.paused) this.onSamples?.(`${Math.floor(this.pt.samples)} samples · paused`);
   }
 
   setRayTraced(on) {
@@ -158,6 +171,7 @@ export class Viewer {
       this.pt.lowResScale = 0.35;
     }
     this.rt = on;
+    this.setPaused(false);
     // The orbit's easing keeps nudging the camera for a second after you
     // let go, and every nudge restarts the ray tracer, so it's off here.
     this.controls.enableDamping = !on;
