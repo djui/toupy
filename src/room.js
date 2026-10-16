@@ -1,7 +1,7 @@
 // The entrance area the table will hang in, modelled after a photo of the
-// flat (no photo is used): a taupe wall with the front door and the intercom
-// right behind the table, a step back to a beige wall with the electrical
-// cabinet and a gold-framed mirror, tall white cupboards on the right, a
+// flat (no photo is used): a wall with the front door and the intercom
+// right behind the table, a step back to the next wall, with the electrical
+// cabinet on the step and a gold-framed mirror, tall white cupboards on the right, a
 // light wood floor. Millimetres, table axis at x = z = 0, viewer on +z.
 import * as THREE from 'three';
 
@@ -37,8 +37,9 @@ export function buildRoom(p, oakTexture) {
   const H = p.ceilingH;
   const R = p.trayD / 2;
 
-  const taupe = std(0x857a6c, 0.9);
-  const beige = std(0xd2bf9c, 0.9);
+  // All walls are one muted mint green; the photo's grey vs yellow is light.
+  const paint = std(0xb5c0ac, 0.9);
+  const taupe = paint, beige = paint;
   const white = std(0xf1eee8, 0.6);
   const ceilingMat = std(0xf6f4f0, 0.95);
   const frameBlack = std(0x1f1c1a, 0.5);
@@ -97,8 +98,8 @@ export function buildRoom(p, oakTexture) {
   lever.position.set(hx - 55, 1060, zDoor + 70);
   g.add(lever, box(18, 18, 30, chrome, hx, 1060, zDoor + 58));
 
-  // intercom handset, beside the corner
-  const ix = xCorner - 330, iy = 1450;
+  // intercom handset, next to the door frame
+  const ix = doorX + doorW / 2 + fw + 170, iy = 1450;
   g.add(box(105, 230, 45, std(0xe9e0cc, 0.5), ix, iy, zDoor + 22));
   g.add(box(70, 190, 20, std(0xded3bb, 0.5), ix, iy, zDoor + 55));
   g.add(box(40, 60, 12, std(0xd8ccb2, 0.5), ix, iy - 160, zDoor + 8));
