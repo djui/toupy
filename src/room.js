@@ -2,7 +2,7 @@
 // flat (no photo is used): a wall with the front door and the intercom
 // right behind the table, a step back to the next wall, with the electrical
 // cabinet on the step and a gold-framed mirror, tall white cupboards on the right, a
-// light wood floor. Millimetres, table axis at x = z = 0, viewer on +z.
+// herringbone oak floor. Millimetres, table axis at x = z = 0, viewer on +z.
 import * as THREE from 'three';
 
 const std = (color, roughness = 0.85, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness, metalness: 0, ...extra });
@@ -32,13 +32,83 @@ function wallX(z0, z1, x, H, mat, facing = 1) {
   return m;
 }
 
+// Pale oak herringbone: 150 × 600 mm planks at 45°, so the zigzag runs
+// toward the viewer. Each plank is cut from a random spot of the sheet photo
+// (grain along its length), lightened, with a little brightness variation and
+// fine dark joints from the underlay showing between planks.
+function herringboneFloor({ xLeft, xRight, zBack, zFront }, oakTexture) {
+  const W = 150, L = 600, GAP = 0.8;
+  let seed = 11;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+  // Lightened copy of the photo: unfinished oak is paler than the sheet.
+  let map = oakTexture;
+  const img = oakTexture.image;
+  if (img && img.complete !== false && img.width) {
+    const c = document.createElement('canvas');
+    c.width = 1024; c.height = Math.round(1024 * img.height / img.width);
+    const ctx = c.getContext('2d');
+    ctx.filter = 'brightness(1.32) saturate(0.7) contrast(0.88)';
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    map = new THREE.CanvasTexture(c);
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.anisotropy = 8;
+  }
+
+  // Herringbone in a frame turned 45° from the room: H planks on a staircase
+  // n·(W, W), V planks against their ends, bands repeating every (L, −L).
+  const s2 = Math.SQRT1_2;
+  const toRoom = (x, y) => [(x - y) * s2, (x + y) * s2];
+  const pos = [], uv = [], col = [], idx = [];
+  const add = (x0, y0, w, h, along) => {
+    const [cx, cz] = toRoom(x0 + w / 2, y0 + h / 2);
+    if (cx < xLeft - L || cx > xRight + L || cz < zBack - L || cz > zFront + L) return;
+    const a = x0 + GAP, b = y0 + GAP, c = x0 + w - GAP, d = y0 + h - GAP;
+    const base = pos.length / 3;
+    for (const [x, y] of [[a, b], [c, b], [c, d], [a, d]]) {
+      const [X, Z] = toRoom(x, y);
+      pos.push(X, 0, Z);
+    }
+    const uw = W / 600, lv = L / 800;
+    const u0 = rnd() * (1 - uw), v0 = rnd() * (1 - lv);
+    if (along === 'x') uv.push(u0, v0, u0, v0 + lv, u0 + uw, v0 + lv, u0 + uw, v0);
+    else uv.push(u0, v0, u0 + uw, v0, u0 + uw, v0 + lv, u0, v0 + lv);
+    const k = 0.86 + rnd() * 0.2, warm = (rnd() - 0.5) * 0.04;
+    for (let i = 0; i < 4; i++) col.push(k + warm, k, k - warm);
+    idx.push(base, base + 2, base + 1, base, base + 3, base + 2);
+  };
+  const ext = Math.max(xRight - xLeft, zFront - zBack) * 1.6;
+  const N = Math.ceil(ext / W), M = Math.ceil(ext / L);
+  for (let m = -M; m <= M; m++) for (let n = -N; n <= N; n++) {
+    const x0 = n * W + m * L, y0 = n * W - m * L;
+    add(x0, y0, L, W, 'x');                 // H plank
+    add(x0 + L, y0 + W - L, W, L, 'y');     // V plank against its end
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  const planks = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map, vertexColors: true, roughness: 0.62 }));
+
+  // dark underlay that shows in the joints
+  const under = new THREE.Mesh(new THREE.PlaneGeometry(xRight - xLeft, zFront - zBack), std(0x7d6e5c, 0.9));
+  under.rotation.x = -Math.PI / 2;
+  under.position.set((xLeft + xRight) / 2, -0.5, (zBack + zFront) / 2);
+
+  const g = new THREE.Group();
+  g.add(under, planks);
+  return g;
+}
+
 export function buildRoom(p, oakTexture) {
   const g = new THREE.Group();
   const H = p.ceilingH;
   const R = p.trayD / 2;
 
-  // All walls are one muted mint green; the photo's grey vs yellow is light.
-  const paint = std(0xb5c0ac, 0.9);
+  // All walls are one muted, brownish mint green; the photo's grey vs yellow is light.
+  const paint = std(0xb0ad94, 0.9);
   const taupe = paint, beige = paint;
   const white = std(0xf1eee8, 0.6);
   const ceilingMat = std(0xf6f4f0, 0.95);
@@ -56,17 +126,7 @@ export function buildRoom(p, oakTexture) {
   const xCorner = 60;
   const xLeft = -2700, xRight = 2700, zFront = 6500;
 
-  // floor: light oak planks, from the sheet photo, greyed and repeated
-  const floorTex = oakTexture.clone();
-  floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
-  floorTex.needsUpdate = true;
-  const floorGeo = new THREE.PlaneGeometry(xRight - xLeft, zFront - zBack);
-  const uv = floorGeo.attributes.uv;
-  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * (xRight - xLeft) / 600, uv.getY(i) * (zFront - zBack) / 800);
-  const floor = new THREE.Mesh(floorGeo, std(0xd9cdbd, 0.45, { map: floorTex }));
-  floor.rotation.x = -Math.PI / 2;
-  floor.position.set((xLeft + xRight) / 2, 0, (zBack + zFront) / 2);
-  g.add(floor);
+  g.add(herringboneFloor({ xLeft, xRight, zBack, zFront }, oakTexture));
 
   // ceiling, facing down
   const ceil = plane(xRight - xLeft, zFront - zBack, ceilingMat);
