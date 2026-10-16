@@ -50,7 +50,7 @@ export function buildRoom(p, oakTexture) {
   // Plan: the door wall sits a few centimetres behind the tray; right of the
   // table the wall steps back to the beige wall; cupboards close the right.
   const zDoor = -(R + 60);
-  const step = 450;
+  const step = 600;
   const zBack = zDoor - step;
   const xCorner = 60;
   const xLeft = -2700, xRight = 2700, zFront = 6500;
@@ -103,16 +103,16 @@ export function buildRoom(p, oakTexture) {
   g.add(box(70, 190, 20, std(0xded3bb, 0.5), ix, iy, zDoor + 55));
   g.add(box(40, 60, 12, std(0xd8ccb2, 0.5), ix, iy - 160, zDoor + 8));
 
-  // electrical cabinet: white, recessed frame and two doors
-  const cx = xCorner + 420, cy = 1500, cw = 440, ch = 900;
-  g.add(box(cw, ch, 25, white, cx, cy, zBack + 12));
+  // electrical cabinet: white, on the short wall of the step, facing right
+  const cz = (zDoor + zBack) / 2, cy = 1500, cw = 440, ch = 900;
+  g.add(box(25, ch, cw, white, xCorner + 12, cy, cz));
   const seam = std(0xc9c4ba, 0.6);
-  g.add(box(cw - 30, 4, 4, seam, cx, cy + 120, zBack + 26));
-  g.add(box(cw - 30, 4, 4, seam, cx, cy - 210, zBack + 26));
-  g.add(box(4, ch - 30, 4, seam, cx + cw / 2 - 40, cy, zBack + 26));
+  g.add(box(4, 4, cw - 30, seam, xCorner + 26, cy + 120, cz));
+  g.add(box(4, 4, cw - 30, seam, xCorner + 26, cy - 210, cz));
+  g.add(box(4, ch - 30, 4, seam, xCorner + 26, cy, cz - cw / 2 + 40));
 
   // mirror with a gold frame, right of the cabinet
-  const mx = xCorner + 1050, my = 1350, mw = 420, mh = 1350, mf = 55;
+  const mx = xCorner + 700, my = 1350, mw = 420, mh = 1350, mf = 55;
   g.add(box(mw, mh, 8, mirror, mx, my, zBack + 30));
   g.add(box(mw + 2 * mf, mf, 40, gold, mx, my + mh / 2 + mf / 2, zBack + 25));
   g.add(box(mw + 2 * mf, mf, 40, gold, mx, my - mh / 2 - mf / 2, zBack + 25));
