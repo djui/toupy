@@ -188,7 +188,7 @@ export class Viewer {
       this.rebuildRoom();
       // stay inside: in front of the walls, under the ceiling
       c.minAzimuthAngle = -1.25; c.maxAzimuthAngle = 1.25;
-      c.maxPolarAngle = 1.8; c.maxDistance = 3300;
+      c.maxPolarAngle = 1.8; c.maxDistance = 6000;
     } else {
       this.removeRoom();
       c.minAzimuthAngle = -Infinity; c.maxAzimuthAngle = Infinity;
@@ -297,7 +297,7 @@ export class Viewer {
       // From the dining table, looking at the entrance, as in the photo.
       const whole = which === 'whole';
       this.controls.target.set(0, whole ? p.ceilingH * 0.45 : L.trayTop - 60, 0);
-      this.camera.position.set(whole ? 500 : 380, whole ? 1500 : 1400, whole ? 3200 : 2300);
+      this.camera.position.set(whole ? 900 : 380, whole ? 1300 : 1400, whole ? 5600 : 2300);
     } else if (which === 'whole') {
       this.controls.target.set(0, p.ceilingH / 2, 0);
       this.camera.position.set(2600, p.ceilingH * 0.75, 3600);

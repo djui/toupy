@@ -53,7 +53,7 @@ export function buildRoom(p, oakTexture) {
   const step = 450;
   const zBack = zDoor - step;
   const xCorner = 60;
-  const xLeft = -2700, xRight = 1400, zFront = 3600;
+  const xLeft = -2700, xRight = 2700, zFront = 6500;
 
   // floor: light oak planks, from the sheet photo, greyed and repeated
   const floorTex = oakTexture.clone();
@@ -135,7 +135,6 @@ export function buildRoom(p, oakTexture) {
 
   return {
     group: g,
-    camera: { position: new THREE.Vector3(350, 1450, 3100) },
     bounds: { xLeft, xRight, zBack, zFront },
   };
 }
