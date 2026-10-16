@@ -32,12 +32,12 @@ function wallX(z0, z1, x, H, mat, facing = 1) {
   return m;
 }
 
-// Pale oak herringbone: 150 × 600 mm planks at 45°, so the zigzag runs
+// Pale oak herringbone: 90 × 450 mm planks at 45°, so the zigzag runs
 // toward the viewer. Each plank is cut from a random spot of the sheet photo
 // (grain along its length), lightened, with a little brightness variation and
 // fine dark joints from the underlay showing between planks.
 function herringboneFloor({ xLeft, xRight, zBack, zFront }, oakTexture) {
-  const W = 150, L = 600, GAP = 0.8;
+  const W = 90, L = 450, GAP = 0.6;
   let seed = 11;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
