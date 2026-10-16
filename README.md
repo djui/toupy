@@ -5,7 +5,9 @@ An interactive 3D blueprint for building a hanging tray table, after the
 
 **Live:** https://djui.github.io/toupy/
 
-- 3D view with an explode slider, cut-away and hover info
+- 3D view with an explode slider, cut-away, hover info and a ray-traced mode
+  ([three-gpu-pathtracer](https://github.com/gkjohnson/three-gpu-pathtracer)) with soft shadows
+  and real brass reflections
 - dimensioned section drawings of the tray, upper hub and lower nub
 - 1:1 A4 templates (profile gauges for routing and turning)
 - STL export per part
