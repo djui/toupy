@@ -32,7 +32,7 @@ To change the code:
 ```bash
 npm install
 npm run dev     # rebuilds on save and serves at http://127.0.0.1:8000
-npm run build   # minified dist/app.js — commit it
+npm run build   # minified dist/app.js + cache-busting stamps in index.html — commit both
 ```
 
 ## Layout
