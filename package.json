@@ -1,0 +1,16 @@
+{
+  "name": "toupy",
+  "private": true,
+  "description": "Interactive exploded 3D blueprint for a hanging tray table",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=iife --minify --target=es2020 --outfile=dist/app.js",
+    "dev": "esbuild src/main.js --bundle --format=iife --sourcemap --target=es2020 --outfile=dist/app.js --watch --servedir=. --serve=127.0.0.1:8000"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  }
+}

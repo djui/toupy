@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toupy hanging table</title>
+<meta name="description" content="Interactive exploded 3D blueprint for building a hanging tray table: drawings, 1:1 templates, router passes, STL.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 1v11' stroke='%23c9a03c' stroke-width='2.5'/%3E%3Cpath d='M13 12h6l3 6H10z' fill='%23b88a58'/%3E%3Cellipse cx='16' cy='19' rx='15' ry='3' fill='%23cfa878'/%3E%3Cpath d='M13 21h6l-2 6h-2z' fill='%23b88a58'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <h1>Toupy <span>hanging tray table — 3D blueprint</span></h1>
+  <div class="actions">
+    <button class="btn" id="copy">Copy link</button>
+    <button class="btn ghost" id="reset">Reset</button>
+    <button class="btn ghost" data-print="docs">Print drawings &amp; plan</button>
+  </div>
+</header>
+<div class="app">
+  <aside class="side">
+    <div id="keys" class="keys"></div>
+    <ul id="warnings" class="warnings" hidden></ul>
+    <div id="params"></div>
+    <p class="fine">Defaults are traced from photos of the 44 cm original. Every change is saved in the link and in this browser.</p>
+  </aside>
+  <main class="main">
+    <nav class="tabs" role="tablist">
+      <button data-tab="3d" role="tab">3D</button>
+      <button data-tab="drawings" role="tab">Drawings</button>
+      <button data-tab="templates" role="tab">Templates</button>
+      <button data-tab="router" role="tab">Router</button>
+      <button data-tab="build" role="tab">Lathe &amp; hanging</button>
+      <button data-tab="bom" role="tab">Materials &amp; cut</button>
+    </nav>
+    <div id="tab-3d" class="tab">
+      <div id="viewport"><div id="tip" hidden></div></div>
+      <div class="viewbar">
+        <label>Explode <input id="explode" type="range" min="0" max="1" step="0.01" value="0"></label>
+        <label class="check"><input id="cut" type="checkbox"> Cut-away</label>
+        <span class="group">View <button class="btn small ghost" data-view="table">Table</button><button class="btn small ghost" data-view="whole">Ceiling to floor</button></span>
+        <span class="group">STL <button class="btn small ghost" data-stl="tray">Tray</button><button class="btn small ghost" data-stl="hub">Hub</button><button class="btn small ghost" data-stl="nub">Nub</button><button class="btn small ghost" data-stl="all">All</button></span>
+      </div>
+    </div>
+    <div id="tab-drawings" class="tab docs" hidden></div>
+    <div id="tab-templates" class="tab docs" hidden></div>
+    <div id="tab-router" class="tab docs" hidden></div>
+    <div id="tab-build" class="tab docs" hidden></div>
+    <div id="tab-bom" class="tab docs" hidden></div>
+  </main>
+</div>
+<div id="print"></div>
+<script src="dist/app.js"></script>
+</body>
+</html>
