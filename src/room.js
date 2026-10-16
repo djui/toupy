@@ -125,8 +125,8 @@ export function buildRoom(p, oakTexture, cache = {}) {
   const zDoor = -(R + 140);
   const step = 600;
   const zBack = zDoor - step;
-  const xCorner = 210;
-  const xLeft = -2550, xRight = 2850, zFront = 6500;
+  const xCorner = 360;
+  const xLeft = -2400, xRight = 3000, zFront = 6500;
 
   g.add(herringboneFloor({ xLeft, xRight, zBack, zFront }, oakTexture, cache));
 
@@ -148,7 +148,7 @@ export function buildRoom(p, oakTexture, cache = {}) {
   g.add(box(skirtD, skirt, step, white, xCorner + skirtD / 2, skirt / 2, (zBack + zDoor) / 2));
 
   // front door: black frame, dark wine-red leaf, lever handle
-  const doorW = 900, doorH = 2100, doorX = -1100, fw = 70;
+  const doorW = 900, doorH = 2100, doorX = -950, fw = 70;
   g.add(box(doorW + 2 * fw, fw, 30, frameBlack, doorX, doorH + fw / 2, zDoor + 15));
   g.add(box(fw, doorH, 30, frameBlack, doorX - doorW / 2 - fw / 2, doorH / 2, zDoor + 15));
   g.add(box(fw, doorH, 30, frameBlack, doorX + doorW / 2 + fw / 2, doorH / 2, zDoor + 15));
