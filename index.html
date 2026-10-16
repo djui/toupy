@@ -6,7 +6,7 @@
 <title>Toupy hanging table</title>
 <meta name="description" content="Interactive exploded 3D blueprint for building a hanging tray table: drawings, 1:1 templates, router passes, STL.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 1v11' stroke='%23c9a03c' stroke-width='2.5'/%3E%3Cpath d='M13 12h6l3 6H10z' fill='%23b88a58'/%3E%3Cellipse cx='16' cy='19' rx='15' ry='3' fill='%23cfa878'/%3E%3Cpath d='M13 21h6l-2 6h-2z' fill='%23b88a58'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=b7ae8c873e">
+<link rel="stylesheet" href="style.css?v=c236d9953f">
 </head>
 <body>
 <header class="top">
@@ -40,12 +40,12 @@
       <button data-tab="bom" role="tab">Materials &amp; cut</button>
     </nav>
     <div id="tab-3d" class="tab">
-      <div id="viewport"><div id="tip" hidden></div></div>
+      <div id="viewport"><div id="tip" hidden></div><div id="samples" class="samples" aria-live="polite"></div></div>
       <div class="viewbar">
         <label>Explode <input id="explode" type="range" min="0" max="1" step="0.01" value="0"></label>
         <label class="check"><input id="cut" type="checkbox"> Cut-away</label>
         <label class="check" title="Show the table in the entrance area of the flat"><input id="room" type="checkbox"> In the room</label>
-        <label class="check" title="Path-traced: real reflections and soft shadows. It sharpens while you hold still."><input id="rt" type="checkbox"> Ray-traced <span id="samples" class="samples"></span></label>
+        <label class="check" title="Path-traced: real reflections and soft shadows. It sharpens while you hold still."><input id="rt" type="checkbox"> Ray-traced</label>
         <span class="group">View <button class="btn small ghost" data-view="table">Table</button><button class="btn small ghost" data-view="whole">Ceiling to floor</button></span>
         <span class="group">STL <button class="btn small ghost" data-stl="tray">Tray</button><button class="btn small ghost" data-stl="hub">Hub</button><button class="btn small ghost" data-stl="nub">Nub</button><button class="btn small ghost" data-stl="all">All</button></span>
       </div>
@@ -58,6 +58,6 @@
   </main>
 </div>
 <div id="print"></div>
-<script src="dist/app.js?v=b31bcc8055"></script>
+<script src="dist/app.js?v=3595d60169"></script>
 </body>
 </html>

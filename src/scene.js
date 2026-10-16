@@ -139,9 +139,9 @@ export class Viewer {
     } else if (moved) {
       this.pt.updateCamera();
     }
-    if (this.dirtyAt) { this.renderer.render(this.scene, this.camera); return; }
+    if (this.dirtyAt) { this.renderer.render(this.scene, this.camera); this.onSamples?.('preparing'); return; }
     this.pt.renderSample();
-    this.onSamples?.(Math.floor(this.pt.samples));
+    this.onSamples?.(this.pt.isCompiling ? 'compiling' : Math.floor(this.pt.samples));
   }
 
   setRayTraced(on) {
@@ -158,6 +158,9 @@ export class Viewer {
       this.pt.lowResScale = 0.35;
     }
     this.rt = on;
+    // The orbit's easing keeps nudging the camera for a second after you
+    // let go, and every nudge restarts the ray tracer, so it's off here.
+    this.controls.enableDamping = !on;
     this.lookKey = null;
     this.look();
     if (this.hovered) { this.hovered.material = this.matFor(this.hovered); this.hovered = null; }
@@ -234,7 +237,9 @@ export class Viewer {
 
   resize() {
     const w = this.el.clientWidth, h = this.el.clientHeight;
-    if (!w || !h) return;
+    // any real resize restarts the ray tracer, so skip ones that change nothing
+    if (!w || !h || (w === this.w && h === this.h)) return;
+    this.w = w; this.h = h;
     this.renderer.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();

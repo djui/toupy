@@ -252,7 +252,10 @@ try {
       tip.textContent = info.label;
       tip.style.transform = `translate(${px.x + 14}px, ${px.y + 14}px)`;
     },
-    onSamples(n) { $('#samples').textContent = n == null ? '' : `· ${n} samples`; },
+    onSamples(n) {
+      $('#samples').textContent = n == null ? '' : n === 'preparing' ? 'Preparing the scene…'
+        : n === 'compiling' ? 'Compiling (the first time takes a few seconds)…' : `${n} samples`;
+    },
   });
 } catch (err) {
   console.error(err);
